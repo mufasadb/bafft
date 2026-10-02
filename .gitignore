@@ -27,7 +27,26 @@ dist/
 .vscode/
 .idea/
 
+# Beads root-level runtime gate locks (the DB + inner locks are handled by .beads/.gitignore)
+/.beads.gate.lock
+/.beads.gate.lock.info
+
+# Beads / Dolt files (added by bd init)
+.dolt/
 *.db
+.beads-credential-key
+.beads/proxieddb/
+
+# Gas City
+.beads/*
+!.beads/identity.toml
+.codex/hooks.json
+.gc/
+.agents/skills/.gc-skill-ownership.json
+.agents/skills/core.gc-*
+.claude/skills/.gc-skill-ownership.json
+.claude/skills/core.gc-*
+.beads.gate.lock.info
 
 # Python bytecode
 __pycache__/
@@ -38,3 +57,11 @@ __pycache__/
 
 # Personal campaign material, internal planning, and local-only fixtures
 /private/
+
+# Local agent and issue-tracker tooling: beads stay private and are never pushed
+# to this public repo (owner, 2026-10-02).
+/.beads/
+/.agents/
+/.codex/
+/.claude/
+/skills-lock.json

@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>bafft</Name>
+  <Repository>ghcr.io/mufasadb/bafft:latest</Repository>
+  <Registry>https://ghcr.io/mufasadb/bafft</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support/>
+  <Project>https://github.com/mufasadb/bafft</Project>
+  <Overview>bafft: TTRPG campaign manager (world entities, session transcription and labelling, table soundboard). Single-user; set BAFFT_PASSWORD to require browser HTTP Basic authentication.</Overview>
+  <Category>Tools:</Category>
+  <WebUI>http://[IP]:[PORT:8792]/</WebUI>
+  <Icon/>
+  <ExtraParams>--health-cmd="node -e \"fetch('http://localhost:8792/api/health').then(r=&gt;process.exit(r.ok?0:1)).catch(()=&gt;process.exit(1))\""</ExtraParams>
+  <PostArgs/>
+  <DateInstalled/>
+  <DonateText/>
+  <DonateLink/>
+  <Requires/>
+
+  <Config Name="WebUI Port" Target="8792" Default="8792" Mode="tcp" Description="HTTP port for the web app + API" Type="Port" Display="always" Required="true" Mask="false">8792</Config>
+  <Config Name="Data" Target="/data" Default="/mnt/user/appdata/bafft" Mode="rw" Description="SQLite db, session audio, pictures, soundboard clips. Must be owned by uid 1000 (the image runs as node, uid 1000): chown -R 1000:1000 once, or SQLITE_CANTOPEN." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/bafft</Config>
+
+  <Config Name="BAFFT_PASSWORD" Target="BAFFT_PASSWORD" Default="" Mode="" Description="Optional HTTP Basic password (any username). Blank: open to anyone who can reach the port. GET /api/health remains public." Type="Variable" Display="always" Required="false" Mask="true"/>
+  <Config Name="BAFFT_MAX_UPLOAD_MB" Target="BAFFT_MAX_UPLOAD_MB" Default="4096" Mode="" Description="Maximum size per uploaded audio file in MB (1 MB = 1048576 bytes). Oversize uploads receive HTTP 413." Type="Variable" Display="advanced" Required="false" Mask="false">4096</Config>
+  <Config Name="TZ" Target="TZ" Default="Etc/UTC" Mode="" Description="Container time zone" Type="Variable" Display="advanced" Required="false" Mask="false">Etc/UTC</Config>
+  <Config Name="ASSEMBLYAI_API_KEY" Target="ASSEMBLYAI_API_KEY" Default="" Mode="" Description="Session transcription (the default ASR provider). Blank: transcription uses the mock." Type="Variable" Display="always" Required="false" Mask="true"/>
+  <Config Name="GEMINI_API_KEY" Target="GEMINI_API_KEY" Default="" Mode="" Description="Drafting and pictures. Blank: those fall back to mocks." Type="Variable" Display="always" Required="false" Mask="true"/>
+  <Config Name="DEEPGRAM_API_KEY" Target="DEEPGRAM_API_KEY" Default="" Mode="" Description="Optional alternative ASR vendor" Type="Variable" Display="advanced" Required="false" Mask="true"/>
+  <Config Name="SPEECHMATICS_API_KEY" Target="SPEECHMATICS_API_KEY" Default="" Mode="" Description="Optional alternative ASR vendor" Type="Variable" Display="advanced" Required="false" Mask="true"/>
+</Container>
