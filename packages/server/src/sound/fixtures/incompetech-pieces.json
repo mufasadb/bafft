@@ -1,0 +1,53 @@
+[
+ {
+  "title": "The Britons",
+  "filename": "The Britons.mp3",
+  "length": "00:05:07",
+  "instruments": "Lute, Recorder, Drums, Flute, Guitar",
+  "genre": "22",
+  "bpm": "180",
+  "description": "Tavern music like from the olden days.",
+  "feel": "Ren Faire, Medieval",
+  "uploaded": "2026-06-29",
+  "isrc": "USUAN2600004",
+  "collection": null,
+  "sheetmusic": null,
+  "video": null,
+  "itunes": null,
+  "filmmusicURL": null
+ },
+ {
+  "title": "The Ice Giants",
+  "filename": "The Ice Giants.mp3",
+  "length": "00:00:44",
+  "instruments": "French Horns, Trombones, Tubas, Euphonium, Trumpets, Cimbasso",
+  "genre": "22",
+  "bpm": "76",
+  "description": null,
+  "feel": "Epic, Somber, Driving",
+  "uploaded": "2020-01-05",
+  "isrc": "USUAN1900053",
+  "collection": "33",
+  "sheetmusic": null,
+  "video": null,
+  "itunes": "https://music.apple.com/us/album/the-ice-giants/1492168723?i=1492168730&app=itunes",
+  "filmmusicURL": "https://incompetech.filmmusic.io/song/5745-the-ice-giants/"
+ },
+ {
+  "title": "Crusade - Heavy Industry",
+  "filename": "Crusade - Heavy Industry.mp3",
+  "length": "00:09:17",
+  "instruments": "Basses, Cellos, Anvils, French Horns, Euphoniums, Trombones, Tubas, Trumpets, Percussion",
+  "genre": "22",
+  "bpm": "90",
+  "description": "Do you have recurring dreams of being an industrial roomba working in an ore processing facility? Do you make fantasy paintings and need some music for timelapses? Do you go jog-hopping in low-gravity post-apocalyptic environments? Do you have opinions about eggs? Are you a monster who is in charge of other monsters? Did you work on a top-hat/sombrero assembly line? Are you starting a ferry line on the river Acheron to compete with Charon? Are you drafting epic legislation? Do you enjoy hitting dumpsters with sticks?",
+  "feel": "Driving, Epic, Somber",
+  "uploaded": "2019-02-15",
+  "isrc": "USUAN1800022",
+  "collection": "6",
+  "sheetmusic": null,
+  "video": "https://youtu.be/8RaUPWhdeng",
+  "itunes": "https://itunes.apple.com/us/album/crusade-heavy-industry-single/1453048521?app=itunes",
+  "filmmusicURL": "https://incompetech.filmmusic.io/song/4678-crusade-heavy-industry/"
+ }
+]

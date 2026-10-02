@@ -1,0 +1,53 @@
+import { after, before, test } from "node:test";
+import assert from "node:assert/strict";
+import { startApp, type App } from "./harness.js";
+let app: App;
+before(async () => { app = await startApp(); });
+after(async () => { await app?.close(); });
+
+test("GM creates, previews, saves, jumps, reloads and deletes a session run sheet", async () => {
+  const { page } = app;
+  await page.getByRole("button", { name: "Run sheet", exact: true }).click();
+  await page.getByRole("button", { name: /New run sheet/ }).click();
+  await page.getByLabel("Title", { exact: true }).fill("Session one");
+  const markdown = "# Opening\n\nA **warm** welcome.\n\n" + "A long scene.\n\n".repeat(60) + "## Finale\n\n- [x] Prepare dice\n\n| Who | Where |\n| --- | --- |\n| Tavia | Hall |";
+  await page.getByLabel("Markdown", { exact: true }).fill(markdown);
+  await page.getByRole("button", { name: "Preview", exact: true }).click();
+  await page.getByRole("heading", { name: "Opening", exact: true }).waitFor();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await page.getByRole("status").waitFor();
+  await page.getByRole("navigation", { name: "Jump to" }).getByRole("link", { name: "Finale" }).click();
+  assert.equal(await page.locator(":focus").getAttribute("id"), "run-sheet-heading-1");
+  assert.equal(await page.getByRole("checkbox").isChecked(), true);
+  await page.reload();
+  await page.getByRole("button", { name: "Run sheet", exact: true }).click();
+  await page.getByRole("heading", { name: "Session one", exact: true }).waitFor();
+  await page.getByRole("button", { name: "Edit", exact: true }).click();
+  assert.equal(await page.getByLabel("Markdown", { exact: true }).inputValue(), markdown);
+  await page.getByLabel("Title", { exact: true }).fill("Unsaved title");
+  page.once("dialog", dialog => dialog.dismiss());
+  await page.getByRole("button", { name: "Campaign", exact: true }).click();
+  assert.equal(await page.getByLabel("Title", { exact: true }).inputValue(), "Unsaved title");
+  page.once("dialog", dialog => dialog.accept());
+  await page.getByRole("button", { name: "Campaign", exact: true }).click();
+  await page.getByRole("button", { name: "Run sheet", exact: true }).click();
+  await page.getByRole("heading", { name: "Session one", exact: true }).waitFor();
+  page.once("dialog", dialog => dialog.accept());
+  await page.getByRole("button", { name: "Delete", exact: true }).click();
+  await page.getByText("Select a run sheet or create one for your next session.").waitFor();
+});
+
+test("a task's tick sits just in front of its text", async () => {
+  const { page, baseUrl } = app;
+  await fetch(`${baseUrl}/api/run-sheets`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: "Ticks", markdown: "- [ ] Hand out hero tokens" }) });
+  await page.reload();
+  await page.getByRole("button", { name: "Run sheet", exact: true }).click();
+  await page.getByRole("button", { name: "Ticks", exact: true }).click();
+  const item = page.locator(".task-list-item").first();
+  const box = await item.locator("input").boundingBox();
+  const text = await item.evaluate((li) => { const r = document.createRange(); r.selectNodeContents(li); return r.getBoundingClientRect().right; });
+  assert.ok(box && box.width < 30, "checkbox is checkbox-sized");
+  assert.ok(box && box.x + box.width <= text, "checkbox is in front of the text");
+  const textLeft = await item.evaluate((li) => (li.lastChild as Text).parentElement!.getBoundingClientRect().left);
+  assert.ok(box && box.x - textLeft < 60, "checkbox is next to the line's start, not off to the right");
+});

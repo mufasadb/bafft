@@ -1,0 +1,24 @@
+# bafft with Docker Compose: docker compose up -d --build, then open http://localhost:8792
+services:
+  bafft:
+    build: .
+    container_name: bafft
+    restart: unless-stopped
+    # Only this computer can reach it. On a home server, change to "8792:8792" to open
+    # it to your network, and set BAFFT_PASSWORD in .env (see the README's Security).
+    ports:
+      - "127.0.0.1:8792:8792"
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      # Database, recordings, pictures and sounds, in a Docker volume (a bind-mounted
+      # folder would need to be owned by uid 1000, the user the app runs as).
+      - bafft-data:/data
+      # Optional: a folder of your own audio for the soundboard, read-only.
+      # - /path/to/your/audio:/import:ro
+    # environment:
+    #   BAFFT_IMPORT_DIR: /import
+
+volumes:
+  bafft-data:

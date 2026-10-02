@@ -1,0 +1,1 @@
+ALTER TABLE `entities` ADD `sounds_like` text DEFAULT '[]' NOT NULL;

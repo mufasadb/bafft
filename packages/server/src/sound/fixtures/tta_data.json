@@ -1,0 +1,73 @@
+{
+ "tracks": [
+  {
+   "key": 526,
+   "track_title": "Lighthouse",
+   "track_type": "ambience + music",
+   "track_genre": [
+    "music",
+    "historical",
+    "horror"
+   ],
+   "flavor_text": "A beacon in the dark, or a front row seat to tragedy.",
+   "link": "https://sounds.tabletopaudio.com/526_Lighthouse.mp3",
+   "small_image": "https://images.tabletopaudio.com/lighthouse.jpg",
+   "large_image": "https://images.tabletopaudio.com/lighthouse.jpg",
+   "new": "true",
+   "tags": [
+    "ocean",
+    "waves",
+    "jetty",
+    "Cthulhu",
+    "sea",
+    "sea shore",
+    "point"
+   ]
+  },
+  {
+   "key": 500,
+   "track_title": "Village Festival",
+   "track_type": "ambience + music",
+   "track_genre": [
+    "music",
+    "fantasy"
+   ],
+   "flavor_text": "It's a beautiful day, and the entire town is out celebrating",
+   "link": "https://sounds.tabletopaudio.com/500_Village_Festival.mp3",
+   "small_image": "https://images.tabletopaudio.com/village-festival.jpg",
+   "large_image": "https://images.tabletopaudio.com/village-festival.jpg",
+   "new": "false",
+   "tags": [
+    "medieval",
+    "celebration",
+    "crowds",
+    "town",
+    "fete",
+    "musicians",
+    "party",
+    "wedding",
+    "dance"
+   ]
+  },
+  {
+   "key": 114,
+   "track_title": "Dwarven City",
+   "track_type": "ambience + music",
+   "track_genre": [
+    "fantasy"
+   ],
+   "flavor_text": "A towering, immense city, hewn from solid rock, where dwarves shape stone and iron into soaring monuments, and mighty weapons.",
+   "link": "https://sounds.tabletopaudio.com/114_Dwarven_City.mp3",
+   "small_image": "https://images.tabletopaudio.com/dwarven-city.jpg",
+   "large_image": "https://images.tabletopaudio.com/dwarven-city.jpg",
+   "new": "false",
+   "tags": [
+    "underground",
+    "dark",
+    "dwarf",
+    "moria",
+    "khazad dum"
+   ]
+  }
+ ]
+}

@@ -1,0 +1,29 @@
+{
+  "name": "bafft",
+  "version": "0.0.0",
+  "license": "AGPL-3.0-or-later",
+  "private": true,
+  "type": "module",
+  "description": "Self-hosted campaign manager for tabletop RPG game masters",
+  "workspaces": [
+    "packages/shared",
+    "packages/server",
+    "packages/web"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,web -c blue,magenta \"npm:dev:server\" \"npm:dev:web\"",
+    "dev:server": "npm run dev --workspace @bafft/server",
+    "dev:web": "npm run dev --workspace @bafft/web",
+    "build": "npm run build --workspace @bafft/shared && npm run build --workspace @bafft/server && npm run build --workspace @bafft/web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "db:generate": "npm run db:generate --workspace @bafft/server",
+    "db:migrate": "npm run db:migrate --workspace @bafft/server",
+    "e2e": "tsx --test e2e/*.e2e.ts"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "playwright": "^1.63.0",
+    "typescript": "^5.7.2"
+  }
+}

@@ -1,0 +1,11 @@
+**/node_modules
+**/dist
+data
+docs
+.git
+.github
+.beads
+.gc
+.claude
+.env
+*.log

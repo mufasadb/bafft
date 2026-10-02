@@ -1,0 +1,1 @@
+ALTER TABLE `soundboards` ADD `scenes` text DEFAULT '[]' NOT NULL;

@@ -1,0 +1,1 @@
+ALTER TABLE `entity_relationships` ADD `gm_only` integer DEFAULT false NOT NULL;

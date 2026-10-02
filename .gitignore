@@ -1,0 +1,40 @@
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Local data: SQLite db + uploaded audio (never committed)
+/data/*.db
+/data/*.db-*
+/data/audio/
+/data/images/
+/data/images-tmp/
+
+# Fixture audio is large; expected JSON is committed (see packages/server fixture harness)
+/data/fixtures/**/*.wav
+/data/fixtures/**/*.mp3
+/data/fixtures/**/*.m4a
+/data/fixtures/**/*.flac
+
+# Env
+.env
+.env.local
+
+# Claude Code local settings (personal overrides, may contain secrets)
+.claude/settings.local.json
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
+
+*.db
+
+# Python bytecode
+__pycache__/
+/data/fixtures/**/transcripts/
+/data/sounds/
+/data/uploads-tmp/
+/data/catalogues/
+
+# Personal campaign material, internal planning, and local-only fixtures
+/private/

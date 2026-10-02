@@ -1,0 +1,27 @@
+{
+  "name": "@bafft/shared",
+  "version": "0.0.0",
+  "license": "AGPL-3.0-or-later",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./entity": "./src/entity.ts",
+    "./session": "./src/session.ts",
+    "./campaign": "./src/campaign.ts",
+    "./npc": "./src/npc.ts",
+    "./soundboard": "./src/soundboard.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  }
+}
