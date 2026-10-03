@@ -23,6 +23,7 @@ import { correctTranscriptWords, CorrectionError, listTranscriptWords } from "..
 import { listEntities, updateEntity } from "../db/entities.js";
 import { listSpeakers, setSpeaker, SpeakerError } from "../db/session-speakers.js";
 import { glossaryForCorrection } from "../labelling/correction-glossary.js";
+import { findCorrectionOccurrences } from "../labelling/correction-occurrences.js";
 import { findNameMatches } from "../labelling/name-matches.js";
 import { getActiveProvider } from "../asr/providers.js";
 import { runTranscription } from "../asr/run-transcription.js";
@@ -172,7 +173,8 @@ sessionsRouter.patch("/:id/words", async (req, res, next) => {
     );
     const { outcome, update } = glossaryForCorrection(await listEntities(), heard, word.text);
     if (update) await updateEntity(update.entityId, { soundsLike: update.soundsLike });
-    res.json(WordCorrectionResultSchema.parse({ word, removedIds, glossary: outcome }));
+    const occurrences = findCorrectionOccurrences(await listTranscriptWords(Number(req.params.id)), heard);
+    res.json(WordCorrectionResultSchema.parse({ word, removedIds, glossary: outcome, occurrences }));
   } catch (err) {
     if (err instanceof CorrectionError) {
       res.status(400).json({ error: err.message });

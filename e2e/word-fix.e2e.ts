@@ -75,3 +75,41 @@ test("a fix saves at once, a known name suggests itself, an unknown one goes int
     [["Taverne", "location", []], ["Zarovich", "npc", []]],
   );
 });
+
+test("a fix offers other occurrences, applies the selected correction and persists both", async () => {
+  const { page, baseUrl } = app;
+  const form = new FormData();
+  form.set("title", "Repeated words");
+  form.set("sessionDate", "2026-10-03");
+  form.set("audio", new Blob([new Uint8Array(10)]), "clip.wav");
+  const session = (await json(`${baseUrl}/api/sessions`, { method: "POST", body: form })) as { id: number };
+  await json(`${baseUrl}/api/sessions/${session.id}/transcribe`, { method: "POST" });
+  await page.reload();
+  await page.getByRole("button", { name: "Sessions", exact: true }).click();
+  await page.getByRole("button", { name: "Repeated words", exact: true }).click();
+  await page.locator(".word").first().dblclick();
+  const fix = page.getByRole("dialog", { name: "Fix word" });
+  await fix.getByRole("textbox", { name: "Correct text" }).fill("thee");
+  await fix.getByRole("button", { name: "Save", exact: true }).click();
+  await fix.waitFor({ state: "detached" });
+  const offer = page.getByRole("region", { name: "Other occurrences" });
+  await offer.waitFor();
+  assert.match(await offer.innerText(), /Also fix 1 other/);
+  const checkbox = offer.getByRole("checkbox");
+  assert.equal(await checkbox.isChecked(), true);
+  assert.match(await offer.innerText(), /party enters the tavern/);
+  await checkbox.uncheck();
+  assert.equal(await offer.getByRole("button", { name: "Apply", exact: true }).isDisabled(), true);
+  await checkbox.check();
+  await offer.getByRole("button", { name: "Apply", exact: true }).click();
+  await offer.waitFor({ state: "detached" });
+  await page.reload();
+  await page.getByRole("button", { name: "Sessions", exact: true }).click();
+  await page.getByRole("button", { name: "Repeated words", exact: true }).click();
+  await page.locator(".word.corrected").first().waitFor();
+  assert.deepEqual((await page.locator(".word").allInnerTexts()).map((t) => t.trim()), ["thee", "party", "enters", "thee", "tavern"]);
+  assert.equal(await page.locator(".word.corrected").count(), 2);
+  const stored = await json(`${baseUrl}/api/sessions/${session.id}/words`) as { heardText: string | null }[];
+  assert.equal(stored[0]!.heardText, "The");
+  assert.equal(stored[3]!.heardText, "the");
+});

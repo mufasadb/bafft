@@ -61,10 +61,20 @@ export const GlossaryOutcomeSchema = z.discriminatedUnion("kind", [
 ]);
 export type GlossaryOutcome = z.infer<typeof GlossaryOutcomeSchema>;
 
+export const CorrectionOccurrenceSchema = z.object({
+  wordIds: z.array(z.number().int().positive()).min(1),
+  startMs: z.number().nonnegative(),
+  heard: z.string(),
+  context: z.string(),
+});
+export type CorrectionOccurrence = z.infer<typeof CorrectionOccurrenceSchema>;
+
 export const WordCorrectionResultSchema = z.object({
   word: TranscriptWordSchema,
   /** Words merged into `word` and gone from the transcript. */
   removedIds: z.array(z.number().int().positive()),
   glossary: GlossaryOutcomeSchema,
+  /** Other uncorrected occurrences in this session (bafft-wg1.17). */
+  occurrences: CorrectionOccurrenceSchema.array().optional(),
 });
 export type WordCorrectionResult = z.infer<typeof WordCorrectionResultSchema>;

@@ -4,7 +4,7 @@
 // Muse's widescreen mockups (wg1.14): full-width script, a "Check names"
 // dropdown, the player docked at the bottom.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { GlossaryOutcome, NameMatch, Session, Speaker, SpeakerUpdate, TranscriptWord } from "@bafft/shared";
+import type { CorrectionOccurrence, GlossaryOutcome, NameMatch, Session, Speaker, SpeakerUpdate, TranscriptWord, WordCorrectionResult } from "@bafft/shared";
 import { api } from "../api.js";
 import { buildChecks, type Check } from "./checks.js";
 import { CheckList } from "./CheckList.js";
@@ -12,6 +12,7 @@ import { Portrait, speakerName, Transcript } from "./Transcript.js";
 import { SpeakerPicker } from "./SpeakerPicker.js";
 import { useClipPlayer } from "./useClipPlayer.js";
 import { WordFix, type FixTarget } from "./WordFix.js";
+import { RepeatFix } from "./RepeatFix.js";
 
 interface Notice {
   text: string;
@@ -31,6 +32,8 @@ export function SessionReview({ sessionId, onBack }: { sessionId: number; onBack
   const [fixing, setFixing] = useState<FixTarget | null>(null);
   const closeFix = useCallback(() => setFixing(null), []);
   const [notice, setNotice] = useState<Notice | null>(null);
+  const [repeatFix, setRepeatFix] = useState<{ key: number; text: string; occurrences: CorrectionOccurrence[] } | null>(null);
+  const repeatKey = useRef(0);
   const [speakers, setSpeakers] = useState<Speaker[]>([]);
   const speakerMap = useMemo(() => new Map(speakers.map((sp) => [sp.speakerLabel, sp])), [speakers]);
   const [picking, setPicking] = useState<{ speakerLabel: string; anchor: string } | null>(null);
@@ -67,6 +70,7 @@ export function SessionReview({ sessionId, onBack }: { sessionId: number; onBack
   }
 
   useEffect(load, [sessionId]);
+  useEffect(() => setRepeatFix(null), [sessionId]);
 
   async function onTranscribe() {
     setTranscribing(true);
@@ -100,14 +104,26 @@ export function SessionReview({ sessionId, onBack }: { sessionId: number; onBack
     [words, nameMatches],
   );
 
-  async function saveFix(target: FixTarget, text: string) {
-    const result = await api.correctWords(sessionId, { wordIds: target.wordIds, text });
+  function updateCorrection(result: WordCorrectionResult) {
     const removed = new Set(result.removedIds);
     setWords((prev) => prev && prev.filter((w) => !removed.has(w.id)).map((w) => (w.id === result.word.id ? result.word : w)));
-    setNotice(noticeFor(result.glossary, refreshNameMatches));
     refreshNameMatches();
+  }
+
+  async function saveFix(target: FixTarget, text: string) {
+    const result = await api.correctWords(sessionId, { wordIds: target.wordIds, text });
+    updateCorrection(result);
+    setNotice(noticeFor(result.glossary, refreshNameMatches));
+    setRepeatFix(result.occurrences?.length
+      ? { key: ++repeatKey.current, text: result.word.text, occurrences: result.occurrences }
+      : null);
     return result;
   }
+
+  // Editing another word while an offer is open must not overwrite that fix.
+  const uncorrectedIds = useMemo(() => new Set((words ?? NO_WORDS).filter((w) => !w.corrected).map((w) => w.id)), [words]);
+  const repeatOccurrences = repeatFix?.occurrences.filter((o) =>
+    o.wordIds.every((id) => uncorrectedIds.has(id))) ?? [];
 
   const checks = useMemo(() => buildChecks(words ?? NO_WORDS, nameMatches), [words, nameMatches]);
 
@@ -185,6 +201,18 @@ export function SessionReview({ sessionId, onBack }: { sessionId: number; onBack
         </div>
       )}
       {notice && <FixNotice notice={notice} onDismiss={() => setNotice(null)} onError={showError} />}
+      {repeatFix && repeatOccurrences.length > 0 && (
+        <RepeatFix
+          key={repeatFix.key}
+          text={repeatFix.text}
+          occurrences={repeatOccurrences}
+          onApply={async (occurrence) => {
+            const result = await api.correctWords(sessionId, { wordIds: occurrence.wordIds, text: repeatFix.text });
+            updateCorrection(result);
+          }}
+          onClose={() => setRepeatFix((current) => current?.key === repeatFix.key ? null : current)}
+        />
+      )}
 
       {words.length > 0 ? (
         <>

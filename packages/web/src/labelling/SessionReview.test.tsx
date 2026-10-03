@@ -354,3 +354,58 @@ test("a speaker can be the GM, someone typed in, or put back to its label", asyn
   expect(mocked.setSpeaker).toHaveBeenLastCalledWith(7, { speakerLabel: "Speaker A", name: null, entityId: null });
   await vi.waitFor(() => expect(screen.getAllByRole("button", { name: "Speaker A" })).toHaveLength(2));
 });
+
+test("a saved fix offers ticked occurrences with context and applies only the selected run", async () => {
+  vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
+  const words = [word(1, "Speaker A", "mistvale", 0), word(2, "Speaker A", "MIST", 5000),
+    word(3, "Speaker A", "VALE,", 5300), word(4, "Speaker A", "mistvale", 10000)];
+  mocked.getSession.mockResolvedValue(session());
+  mocked.listWords.mockResolvedValue(words);
+  mocked.correctWords.mockResolvedValueOnce({
+    word: corrected(words[0]!, "Mistvale"), removedIds: [], glossary: { kind: "none" },
+    occurrences: [
+      { wordIds: [2, 3], startMs: 5000, heard: "MIST VALE,", context: "through MIST VALE, tonight" },
+      { wordIds: [4], startMs: 10000, heard: "mistvale", context: "leave mistvale tomorrow" },
+    ],
+  }).mockResolvedValueOnce({
+    word: corrected(words[1]!, "Mistvale", { endMs: 5600, heardText: "MIST VALE," }),
+    removedIds: [3], glossary: { kind: "none" }, occurrences: [],
+  });
+  render(<SessionReview sessionId={7} onBack={() => {}} />);
+  await userEvent.dblClick((await screen.findAllByText("mistvale", { exact: false }))[0]!);
+  await userEvent.clear(screen.getByRole("textbox", { name: "Correct text" }));
+  await userEvent.type(screen.getByRole("textbox", { name: "Correct text" }), "Mistvale{Enter}");
+  expect(await screen.findByRole("region", { name: "Other occurrences" })).toHaveTextContent("Also fix 2 others");
+  expect(screen.getByRole("checkbox", { name: /0:00:05 through MIST VALE, tonight/ })).toBeChecked();
+  const other = screen.getByRole("checkbox", { name: /0:00:10 leave mistvale tomorrow/ });
+  expect(other).toBeChecked();
+  await userEvent.click(other);
+  await userEvent.click(screen.getByRole("button", { name: "Apply" }));
+  await vi.waitFor(() => expect(screen.queryByRole("region", { name: "Other occurrences" })).not.toBeInTheDocument());
+  expect(mocked.correctWords).toHaveBeenCalledTimes(2);
+  expect(mocked.correctWords).toHaveBeenLastCalledWith(7, { wordIds: [2, 3], text: "Mistvale" });
+  expect(document.querySelector('.word[data-word-id="2"]')).toHaveClass("corrected");
+  expect(document.querySelector('.word[data-word-id="3"]')).toBeNull();
+  expect(document.querySelector('.word[data-word-id="4"]')).not.toHaveClass("corrected");
+});
+
+test("a failed repeated fix keeps unsaved occurrences available for retry", async () => {
+  vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
+  const words = [word(1, "Speaker A", "tomorow", 0), word(2, "Speaker A", "tomorow", 5000), word(3, "Speaker A", "tomorow", 10000)];
+  mocked.getSession.mockResolvedValue(session());
+  mocked.listWords.mockResolvedValue(words);
+  mocked.correctWords.mockResolvedValueOnce({ word: corrected(words[0]!, "tomorrow"), removedIds: [], glossary: { kind: "none" },
+    occurrences: words.slice(1).map((w) => ({ wordIds: [w.id], startMs: w.startMs, heard: w.text, context: w.text })) })
+    .mockResolvedValueOnce({ word: corrected(words[1]!, "tomorrow"), removedIds: [], glossary: { kind: "none" } })
+    .mockRejectedValueOnce(new Error("Connection lost"))
+    .mockResolvedValueOnce({ word: corrected(words[2]!, "tomorrow"), removedIds: [], glossary: { kind: "none" } });
+  render(<SessionReview sessionId={7} onBack={() => {}} />);
+  await userEvent.dblClick((await screen.findAllByText("tomorow", { exact: false }))[0]!);
+  await userEvent.type(screen.getByRole("textbox", { name: "Correct text" }), "tomorrow{Enter}");
+  await userEvent.click(await screen.findByRole("button", { name: "Apply" }));
+  expect(await screen.findByText("Connection lost")).toBeInTheDocument();
+  expect(screen.getAllByRole("checkbox")).toHaveLength(1);
+  await userEvent.click(screen.getByRole("button", { name: "Apply" }));
+  await vi.waitFor(() => expect(screen.queryByRole("region", { name: "Other occurrences" })).not.toBeInTheDocument());
+  expect(mocked.correctWords.mock.calls.map((call) => call[1].wordIds)).toEqual([[1], [2], [3], [3]]);
+});

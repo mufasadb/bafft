@@ -297,6 +297,26 @@ test("PATCH /api/sessions/:id/words refuses words that aren't neighbours or aren
 });
 
 // bafft-wg1.12: who's talking.
+test("a correction offers only other uncorrected occurrences in its session, including runs", async () => {
+  const { sessionId, words } = await sessionWithWords(["to", "Mist", "Vale", "then", "MIST", "VALE,", "and", "mist", "vale"]);
+  const elsewhere = await sessionWithWords(["mist", "vale"]);
+  await correct(sessionId, [words[7]!.id, words[8]!.id], "Mistvale");
+  const result = WordCorrectionResultSchema.parse(
+    await (await correct(sessionId, [words[1]!.id, words[2]!.id], "Mistvale")).json(),
+  );
+  assert.deepEqual(result.occurrences?.map((o) => o.wordIds), [[words[4]!.id, words[5]!.id]]);
+  assert.equal(result.occurrences?.[0]?.startMs, 2000);
+  assert.match(result.occurrences![0]!.context, /then MIST VALE, and/);
+
+  const applied = WordCorrectionResultSchema.parse(
+    await (await correct(sessionId, result.occurrences![0]!.wordIds, "Mistvale")).json(),
+  );
+  assert.deepEqual(applied.occurrences, []);
+  assert.equal(applied.word.heardText, "MIST VALE,");
+  const otherWords = TranscriptWordSchema.array().parse(await (await fetch(`${baseUrl}/api/sessions/${elsewhere.sessionId}/words`)).json());
+  assert.ok(otherWords.every((w) => !w.corrected));
+});
+
 async function sessionWithSpeakers(turns: [string, string][]) {
   const form = new FormData();
   form.set("title", "Speakers");
