@@ -14,24 +14,26 @@ import { transcriptWords } from "./schema.js";
  * duplicates, so a session's words always reflect its latest ASR pass.
  */
 export async function replaceTranscriptWords(sessionId: number, words: Word[]): Promise<TranscriptWord[]> {
-  await db.delete(transcriptWords).where(eq(transcriptWords.sessionId, sessionId));
-  if (words.length === 0) return [];
-  const rows = await db
-    .insert(transcriptWords)
-    .values(
-      words.map((w) => ({
-        sessionId,
-        speakerLabel: w.speakerLabel,
-        text: w.text,
-        startMs: w.startMs,
-        endMs: w.endMs,
-        confidence: w.confidence,
-        isUncertain: w.confidence < config.uncertainConfidenceThreshold,
-        corrected: false,
-      })),
-    )
-    .returning();
-  return rows;
+  // One transaction (bafft-dat): a failed insert must not leave the session with no words.
+  return db.transaction(async (tx) => {
+    await tx.delete(transcriptWords).where(eq(transcriptWords.sessionId, sessionId));
+    if (words.length === 0) return [];
+    return tx
+      .insert(transcriptWords)
+      .values(
+        words.map((w) => ({
+          sessionId,
+          speakerLabel: w.speakerLabel,
+          text: w.text,
+          startMs: w.startMs,
+          endMs: w.endMs,
+          confidence: w.confidence,
+          isUncertain: w.confidence < config.uncertainConfidenceThreshold,
+          corrected: false,
+        })),
+      )
+      .returning();
+  });
 }
 
 export async function listTranscriptWords(sessionId: number): Promise<TranscriptWord[]> {
