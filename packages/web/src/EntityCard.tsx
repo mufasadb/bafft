@@ -3,6 +3,7 @@ import { TYPE_SINGULAR } from "./labels.js";
 import { Picture } from "./Picture.js";
 import { Relationships } from "./Relationships.js";
 import { Icon } from "./theme/Icon.js";
+import { heroLine } from "./forgesteel.js";
 
 // The read view for locations, items, characters and players (bafft-a41),
 // same shape as the NPC card: framed picture, who/what in one line,
@@ -25,6 +26,7 @@ export function EntityCard({
   onError: (err: unknown) => void;
 }) {
   const subtitle = [TYPE_SINGULAR[entity.type], ...entity.tags].join(" · ");
+  const fs = entity.type === "character" ? entity.profile?.forgeSteel : undefined;
 
   return (
     <article className="entity-card panel ornate">
@@ -35,6 +37,18 @@ export function EntityCard({
           <div className="who">{subtitle}</div>
           {entity.aliases.length > 0 && <p className="hint">Also called {entity.aliases.join(", ")}</p>}
           {entity.soundsLike.length > 0 && <p className="hint">Said like “{entity.soundsLike.join("”, “")}”</p>}
+          {fs && (heroLine(fs) || fs.url) && (
+            <p className="forge-steel-line">
+              {heroLine(fs)}
+              {[fs.career, fs.culture].some(Boolean) && <span className="sub"> · {[fs.career, fs.culture].filter(Boolean).join(" · ")}</span>}
+              {fs.url && (
+                <>
+                  {heroLine(fs) && " · "}
+                  <a href={fs.url} target="_blank" rel="noreferrer">Open in Forge Steel</a>
+                </>
+              )}
+            </p>
+          )}
           <div className="row">
             <button onClick={onEdit}>
               <Icon name="quill" />

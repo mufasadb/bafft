@@ -293,6 +293,17 @@ legend {
   gap: 1.5rem;
   align-items: start;
 }
+/* A hero's Forge Steel link + import (bafft-cb6). */
+.forge-steel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem 0.75rem;
+  border: 1px dashed var(--parchment-edge);
+  border-radius: var(--radius);
+}
+.forge-steel legend { padding: 0 0.3rem; color: var(--ink-soft); }
+.forge-steel-line { margin: 0.2rem 0; }
 .field {
   padding: 0.35rem 0.5rem 0.5rem;
   margin: 0.25rem -0.5rem;

@@ -113,6 +113,25 @@ export type NpcTextField = (typeof NPC_TEXT_FIELDS)[number];
 /** The plot-bearing fields: what "keep to my notes" never lets the AI write. */
 export const NPC_STORY_FIELDS = ["wants", "can", "plan", "sideways", "story"] as const satisfies readonly NpcTextField[];
 
+/**
+ * A hero's link to Forge Steel (forgesteel.net), the Draw Steel character
+ * builder (bafft-cb6). Forge Steel keeps heroes in the browser, so a link
+ * carries only an id and opens only where the hero lives; the summary below
+ * comes from importing the hero's exported .ds-hero file.
+ */
+export const ForgeSteelHeroSchema = z.object({
+  url: z.string().optional(),
+  ancestry: z.string().optional(),
+  className: z.string().optional(),
+  subclass: z.string().optional(),
+  level: z.number().int().optional(),
+  career: z.string().optional(),
+  culture: z.string().optional(),
+  complication: z.string().optional(),
+  importedAt: z.string().optional(),
+});
+export type ForgeSteelHero = z.infer<typeof ForgeSteelHeroSchema>;
+
 export const NpcProfileSchema = z.object({
   ancestry: z.string().optional(),
   occupation: z.string().optional(),
@@ -142,6 +161,8 @@ export const NpcProfileSchema = z.object({
   // like, then why it matters to the story. Notes stay in entity.notes.
   description: z.string().optional(),
   storyRelevance: z.string().optional(),
+  // Heroes (characters) can point at their Forge Steel sheet (bafft-cb6).
+  forgeSteel: ForgeSteelHeroSchema.optional(),
 });
 export type NpcProfile = z.infer<typeof NpcProfileSchema>;
 

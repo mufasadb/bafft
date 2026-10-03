@@ -5,7 +5,7 @@
 import { randomUUID } from "node:crypto";
 import { basename, extname, join } from "node:path";
 import { access, mkdir, rename, writeFile } from "node:fs/promises";
-import { Router } from "express";
+import express, { Router } from "express";
 import { requirePositiveIntId } from "./params.js";
 import {
   EntitySchema,
@@ -240,6 +240,37 @@ entitiesRouter.post("/:id/picture/generate", async (req, res, next) => {
     next(err);
   }
 });
+
+// A picture brought in from elsewhere, e.g. a Forge Steel hero's portrait
+// (bafft-cb6): the raw image as the body, replacing any earlier picture.
+const UPLOAD_EXTENSIONS: Record<string, string> = { "image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp" };
+entitiesRouter.post(
+  "/:id/picture",
+  express.raw({ type: Object.keys(UPLOAD_EXTENSIONS), limit: "8mb" }),
+  async (req, res, next) => {
+    try {
+      const id = Number(req.params.id);
+      const entity = await getEntity(id);
+      if (!entity) {
+        res.status(404).json({ error: "entity not found" });
+        return;
+      }
+      const ext = UPLOAD_EXTENSIONS[String(req.headers["content-type"]).split(";")[0].trim()];
+      if (!ext || !Buffer.isBuffer(req.body) || req.body.length === 0) {
+        res.status(415).json({ error: "send a PNG, JPEG or WebP image" });
+        return;
+      }
+      await removeEntityImages(id);
+      const finalDir = join(config.imagesDir, String(id));
+      await mkdir(finalDir, { recursive: true });
+      await writeFile(join(finalDir, `portrait${ext}`), req.body);
+      const updated = await updateEntity(id, { imagePath: join("images", String(id), `portrait${ext}`) });
+      res.json(EntitySchema.parse(updated));
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 entitiesRouter.post("/:id/picture/accept", async (req, res, next) => {
   try {

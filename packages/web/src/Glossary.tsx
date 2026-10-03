@@ -6,6 +6,7 @@ import {
   type EntityRelationship,
   type EntityType,
   type EntityWithChildren,
+  type ForgeSteelHero,
 } from "@bafft/shared";
 import { api } from "./api.js";
 import { TYPE_LABELS, TYPE_SINGULAR, typeName } from "./labels.js";
@@ -13,6 +14,7 @@ import { LocationInside, useLocationInside } from "./LocationInside.js";
 import { EntityCard } from "./EntityCard.js";
 import { EntityPicker } from "./EntityPicker.js";
 import { Icon } from "./theme/Icon.js";
+import { forgeSteelLink, heroLine, parseForgeSteelHero } from "./forgesteel.js";
 
 // Glossary UI (bafft-wg1.3): the list, card and edit views for every entity
 // type (NPCs have their own richer creator, see npc/). Opening an entity
@@ -38,6 +40,11 @@ type FormState = {
   // Players only (bafft-w8f.8): the character they play, an entity id, NEW_HERO or "".
   heroId: string;
   newHeroName: string;
+  // Characters only (bafft-cb6): their Forge Steel sheet, and what an
+  // imported .ds-hero brought across (the picture is used only if there's none).
+  forgeSteelUrl: string;
+  forgeSteel: ForgeSteelHero | null;
+  importedPicture: string | null;
 };
 
 /** A player's hero is the character their "plays" relationship points at. */
@@ -48,6 +55,7 @@ function emptyForm(type: EntityType): FormState {
   return {
     type, name: "", aliases: "", soundsLike: "", tags: "", notes: "", quirks: "",
     description: "", storyRelevance: "", heroId: "", newHeroName: "",
+    forgeSteelUrl: "", forgeSteel: null, importedPicture: null,
   };
 }
 
@@ -64,6 +72,9 @@ function toForm(e: Entity): FormState {
     storyRelevance: e.profile?.storyRelevance ?? "",
     heroId: "",
     newHeroName: "",
+    forgeSteelUrl: e.profile?.forgeSteel?.url ?? "",
+    forgeSteel: e.profile?.forgeSteel ?? null,
+    importedPicture: null,
   };
 }
 
@@ -185,9 +196,14 @@ export function Glossary({ type: pinnedType, openId }: { type?: EntityType; open
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const fsUrl = form.forgeSteelUrl.trim() ? forgeSteelLink(form.forgeSteelUrl) : null;
+    if (form.type === "character" && form.forgeSteelUrl.trim() && !fsUrl) {
+      showError(new Error("The Forge Steel link isn't a web address (it should start with https://)."));
+      return;
+    }
     setStatus({ kind: "saving" });
     try {
-      const saved = await api.saveEntity(editingId, {
+      let saved = await api.saveEntity(editingId, {
         type: form.type,
         name: form.name,
         aliases: splitCsv(form.aliases),
@@ -203,7 +219,11 @@ export function Glossary({ type: pinnedType, openId }: { type?: EntityType; open
               },
             }
           : { quirks: splitLines(form.quirks) }),
+        ...(form.type === "character" ? { profile: characterProfile(editing?.profile ?? null, form, fsUrl) } : {}),
       });
+      if (form.type === "character" && form.importedPicture && !saved.imagePath) {
+        saved = await api.uploadPicture(saved.id, await (await fetch(form.importedPicture)).blob());
+      }
       if (form.type === "player") await saveHero(saved.id);
       if (form.type === "location") {
         try {
@@ -234,6 +254,22 @@ export function Glossary({ type: pinnedType, openId }: { type?: EntityType; open
       : wanted;
     if (heroId !== null) {
       await api.createRelationship({ fromEntityId: playerId, toEntityId: heroId, description: PLAYS, isContainment: false, gmOnly: false });
+    }
+  }
+
+  async function onImportHero(file: File | undefined) {
+    if (!file) return;
+    try {
+      const hero = parseForgeSteelHero(await file.text());
+      setForm((f) => ({
+        ...f,
+        name: f.name.trim() ? f.name : hero.name,
+        forgeSteel: { ...hero.summary, importedAt: new Date().toISOString() },
+        importedPicture: hero.picture,
+      }));
+      setStatus({ kind: "idle" });
+    } catch (err) {
+      showError(err);
     }
   }
 
@@ -430,6 +466,30 @@ export function Glossary({ type: pinnedType, openId }: { type?: EntityType; open
               <small>The character this player plays.</small>
             </div>
           )}
+          {form.type === "character" && (
+            <fieldset className="forge-steel">
+              <legend>Forge Steel</legend>
+              <label>
+                Forge Steel link
+                <input type="url" value={form.forgeSteelUrl} placeholder="https://forgesteel.net/#/hero/view/…"
+                  onChange={(e) => set({ forgeSteelUrl: e.target.value })} />
+                <small>The hero's sheet. It opens only in the browser that has the hero, since Forge Steel keeps heroes there.</small>
+              </label>
+              <label>
+                Import a .ds-hero file
+                <input type="file" accept=".ds-hero,.drawsteel-hero,application/json"
+                  onChange={(e) => { void onImportHero(e.target.files?.[0]); e.target.value = ""; }} />
+                <small>In Forge Steel, open the hero and export it. Brings across ancestry, class, level and career, and the portrait if this hero has no picture yet.</small>
+              </label>
+              {form.forgeSteel && (
+                <p className="hint" data-testid="forge-steel-summary">
+                  {heroLine(form.forgeSteel) || "Imported"}
+                  {form.importedPicture && !editing?.imagePath && " · with portrait"}
+                  {form.forgeSteel.importedAt && ` · imported ${new Date(form.forgeSteel.importedAt).toLocaleDateString()}`}
+                </p>
+              )}
+            </fieldset>
+          )}
           {form.type === "location" && <LocationInside key={editingId ?? "new"} entities={entities ?? []}
             entityId={editingId} value={inside.parentId} onChange={inside.setParentId} disabled={!inside.ready} />}
           <label>
@@ -555,4 +615,12 @@ function LocationTree({
       })}
     </ul>
   );
+}
+
+/** A character's profile with its Forge Steel link and summary folded in. */
+function characterProfile(existing: Entity["profile"], form: FormState, url: string | null) {
+  const forgeSteel: ForgeSteelHero = { ...(form.forgeSteel ?? {}), ...(url ? { url } : {}) };
+  if (!url) delete forgeSteel.url;
+  const { forgeSteel: _old, ...rest } = existing ?? {};
+  return Object.keys(forgeSteel).length > 0 ? { ...rest, forgeSteel } : rest;
 }

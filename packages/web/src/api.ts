@@ -156,6 +156,15 @@ export const api = {
     const res = await send(`/api/entities/${entityId}/picture/accept`, jsonBody("POST", { tempId }));
     return EntitySchema.parse(await res.json());
   },
+  /** Sets an entity's picture from an image (a data: URL works, via fetch). */
+  async uploadPicture(entityId: number, image: Blob) {
+    const res = await send(`/api/entities/${entityId}/picture`, {
+      method: "POST",
+      headers: { "Content-Type": image.type },
+      body: image,
+    });
+    return EntitySchema.parse(await res.json());
+  },
   // ---------- soundboard + sound library (bafft-c4d) ----------
   async listSoundboards() {
     return SoundboardSchema.array().parse(await (await send("/api/soundboards")).json());

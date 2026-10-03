@@ -477,3 +477,92 @@ describe("location fields (bafft-w8f.16)", () => {
     });
   });
 });
+
+describe("Forge Steel heroes (bafft-cb6)", () => {
+  const dsHero = {
+    id: "fs-1",
+    name: "Brannoc Ashhelm",
+    picture: "data:image/png;base64,iVBORw0KGgo=",
+    ancestry: { name: "Dwarf" },
+    culture: null,
+    career: { name: "Soldier" },
+    class: { name: "Fury", level: 2, subclasses: [{ name: "Berserker", selected: true }] },
+    complication: null,
+  };
+
+  test("importing a .ds-hero fills the name, and Save keeps the link, summary and portrait", async () => {
+    const saved = entity(9, "Brannoc Ashhelm", { type: "character" });
+    mocked.saveEntity.mockResolvedValue(saved);
+    mocked.uploadPicture.mockResolvedValue({ ...saved, imagePath: "images/9/portrait.png" });
+    const user = userEvent.setup();
+    render(<Glossary type="character" />);
+
+    const file = new File([JSON.stringify(dsHero)], "Brannoc Ashhelm.ds-hero", { type: "application/octet-stream" });
+    await user.upload(screen.getByLabelText(/Import a .ds-hero file/), file);
+    expect(await screen.findByTestId("forge-steel-summary")).toHaveTextContent("Level 2 Dwarf Fury (Berserker) · with portrait");
+    expect(screen.getByLabelText("Name")).toHaveValue("Brannoc Ashhelm");
+
+    await user.type(screen.getByLabelText(/^Forge Steel link/), "https://forgesteel.net/#/hero/view/fs-1");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(mocked.uploadPicture).toHaveBeenCalledWith(9, expect.any(Blob)));
+    const body = mocked.saveEntity.mock.calls[0]![1];
+    expect(body.profile?.forgeSteel).toMatchObject({
+      url: "https://forgesteel.net/#/hero/view/fs-1",
+      ancestry: "Dwarf",
+      className: "Fury",
+      subclass: "Berserker",
+      level: 2,
+      career: "Soldier",
+    });
+  });
+
+  test("an imported portrait never replaces a picture the hero already has", async () => {
+    const hero = entity(9, "Brannoc Ashhelm", { type: "character", imagePath: "images/9/portrait.png" });
+    mocked.listEntities.mockResolvedValue([hero]);
+    mocked.saveEntity.mockResolvedValue(hero);
+    const user = userEvent.setup();
+    render(<Glossary type="character" />);
+
+    await user.click(await screen.findByRole("button", { name: /Brannoc/ }));
+    await user.click(screen.getByRole("button", { name: "Edit" }));
+    await user.upload(screen.getByLabelText(/Import a .ds-hero file/), new File([JSON.stringify(dsHero)], "h.ds-hero"));
+    await screen.findByTestId("forge-steel-summary");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(mocked.saveEntity).toHaveBeenCalled());
+    expect(mocked.uploadPicture).not.toHaveBeenCalled();
+  });
+
+  test("a file that isn't a hero says so and changes nothing", async () => {
+    const user = userEvent.setup();
+    render(<Glossary type="character" />);
+    await user.upload(screen.getByLabelText(/Import a .ds-hero file/), new File(["{\"name\":\"A sword\"}"], "x.ds-hero"));
+    expect(await screen.findByText(/isn't a Forge Steel hero/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Name")).toHaveValue("");
+  });
+
+  test("a link that isn't a web address is refused before saving", async () => {
+    const user = userEvent.setup();
+    render(<Glossary type="character" />);
+    await user.type(screen.getByLabelText("Name"), "Brannoc");
+    await user.type(screen.getByLabelText(/^Forge Steel link/), "forgesteel hero 12");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    // The browser's own check on a url field stops it first; ours backs it up.
+    expect(screen.getByLabelText(/^Forge Steel link/)).toBeInvalid();
+    expect(mocked.saveEntity).not.toHaveBeenCalled();
+  });
+
+  test("the card shows the hero line and opens the sheet in Forge Steel", async () => {
+    const hero = entity(9, "Brannoc Ashhelm", {
+      type: "character",
+      profile: { forgeSteel: { url: "https://forgesteel.net/#/hero/view/fs-1", level: 2, ancestry: "Dwarf", className: "Fury", career: "Soldier" } },
+    });
+    mocked.listEntities.mockResolvedValue([hero]);
+    const user = userEvent.setup();
+    render(<Glossary type="character" />);
+    await user.click(await screen.findByRole("button", { name: /Brannoc/ }));
+    expect(screen.getByText(/Level 2 Dwarf Fury/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open in Forge Steel" })).toHaveAttribute("href", "https://forgesteel.net/#/hero/view/fs-1");
+  });
+});

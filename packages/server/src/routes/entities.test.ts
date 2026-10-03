@@ -1,7 +1,7 @@
 // Real HTTP integration test, same pattern as routes/sessions.test.ts.
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync, existsSync, mkdirSync, writeFileSync, utimesSync } from "node:fs";
+import { mkdtempSync, rmSync, existsSync, readFileSync, mkdirSync, writeFileSync, utimesSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { AddressInfo } from "node:net";
@@ -229,6 +229,39 @@ test("picture accept without a prior generate is rejected, not a 500", async () 
     body: JSON.stringify({ tempId: "does-not-exist.svg" }),
   });
   assert.equal(res.status, 422);
+});
+
+test("a picture brought in from elsewhere replaces the old one (bafft-cb6)", async () => {
+  const hero = await createEntity({ type: "character", name: "Imported Hero" });
+  const png = Buffer.from("89504e470d0a1a0a", "hex");
+  const res = await fetch(`${baseUrl}/api/entities/${hero.id}/picture`, {
+    method: "POST",
+    headers: { "Content-Type": "image/png" },
+    body: png,
+  });
+  assert.equal(res.status, 200);
+  const saved = EntitySchema.parse(await res.json());
+  assert.equal(saved.imagePath, `images/${hero.id}/portrait.png`);
+  assert.deepEqual(readFileSync(join(config.imagesDir, String(hero.id), "portrait.png")), png);
+
+  const jpeg = await fetch(`${baseUrl}/api/entities/${hero.id}/picture`, {
+    method: "POST",
+    headers: { "Content-Type": "image/jpeg" },
+    body: Buffer.from("ffd8ffe0", "hex"),
+  });
+  assert.equal(EntitySchema.parse(await jpeg.json()).imagePath, `images/${hero.id}/portrait.jpg`);
+  assert.ok(!existsSync(join(config.imagesDir, String(hero.id), "portrait.png")));
+});
+
+test("a picture upload that isn't an image is refused", async () => {
+  const hero = await createEntity({ type: "character", name: "Not An Image" });
+  for (const [type, body] of [["image/svg+xml", "<svg/>"], ["text/plain", "hi"], ["image/png", ""]]) {
+    const res = await fetch(`${baseUrl}/api/entities/${hero.id}/picture`, { method: "POST", headers: { "Content-Type": type! }, body });
+    assert.equal(res.status, 415, type);
+  }
+  assert.equal((await fetch(`${baseUrl}/api/entities/999999/picture`, {
+    method: "POST", headers: { "Content-Type": "image/png" }, body: "x",
+  })).status, 404);
 });
 
 async function generateAndAccept(id: number): Promise<string> {
